@@ -1,0 +1,12 @@
+html5sec.com
+
+inseriamo la nostra "shellcode" nella document.location.hash, cioè nella parte dopo # nell'url
+quindi abbiamo www.stuff#nostra_shellcode
+
+per eseguirla dobbiamo scrivere
+	eval(document.location.hash)
+
+per far si che il codice venga eseguito devo rimuovere i numeri, così sostituisco l'"1" con "-~[]"
+
+
+--> la parte dopo # non viene inviata al server, ma rimane nel client. è accessibile grazie a document.location.hash
